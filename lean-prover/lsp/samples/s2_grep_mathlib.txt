@@ -1,0 +1,20 @@
+.lake/packages/mathlib/Mathlib/Algebra/Group/Basic.lean:312:theorem add_zero (a : M) : a + 0 = a := by rw [← zero_add a, add_comm]
+.lake/packages/mathlib/Mathlib/Algebra/Group/Defs.lean:201:  protected theorem add_zero : ∀ a : M, a + 0 = a
+.lake/packages/mathlib/Mathlib/Algebra/Group/Defs.lean:788:theorem add_zero (a : G) : a + 0 = a := by simp
+.lake/packages/mathlib/Mathlib/Data/Nat/Basic.lean:55:@[simp] theorem add_zero (n : ℕ) : n + 0 = n := rfl
+.lake/packages/mathlib/Mathlib/Data/Int/Defs.lean:140:theorem add_zero (a : ℤ) : a + 0 = a := by cases a <;> rfl
+.lake/packages/mathlib/Mathlib/Algebra/GroupWithZero/Basic.lean:98:theorem add_zero' (a : α) : a + 0 = a := add_zero a
+.lake/packages/mathlib/Mathlib/Algebra/Order/Ring/Lemmas.lean:441:  ... add_zero, mul_one, le_refl ...
+.lake/packages/mathlib/Mathlib/Topology/Algebra/Monoid.lean:223:  simpa only [add_zero] using h
+.lake/packages/mathlib/Mathlib/Analysis/Normed/Group/Basic.lean:677:  rw [add_zero] at hx
+.lake/packages/mathlib/Mathlib/Algebra/BigOperators/Basic.lean:1203:  simp only [add_zero, Finset.sum_empty]
+.lake/packages/mathlib/Mathlib/LinearAlgebra/Basic.lean:512:  rw [map_add, add_zero]
+.lake/packages/mathlib/Mathlib/CategoryTheory/Preadditive/Basic.lean:88:  simp [add_zero, comp_add]
+.lake/packages/mathlib/Mathlib/Algebra/Module/Basic.lean:341:  rw [smul_add, add_zero]
+.lake/packages/mathlib/Mathlib/MeasureTheory/Integral/Basic.lean:919:  simpa [add_zero] using integrable_const
+.lake/packages/mathlib/Mathlib/NumberTheory/Padics/Basic.lean:204:  rw [← add_zero (p ^ n)]
+.lake/packages/mathlib/Mathlib/Algebra/Group/Nat.lean:33:instance : AddMonoid ℕ where add_zero := Nat.add_zero
+.lake/packages/mathlib/Mathlib/Order/Filter/Basic.lean:1455:  filter_upwards with x using add_zero x ▸ le_rfl
+.lake/packages/mathlib/Mathlib/Combinatorics/SimpleGraph/Basic.lean:677:  omega -- uses add_zero internally
+.lake/packages/mathlib/Mathlib/Algebra/Ring/Basic.lean:55:protected theorem add_zero (a : R) : a + 0 = a := AddMonoid.add_zero a
+.lake/packages/mathlib/Mathlib/Tactic/Ring/Basic.lean:1099:  -- normal form drops add_zero terms

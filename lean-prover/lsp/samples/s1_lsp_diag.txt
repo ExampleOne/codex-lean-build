@@ -1,0 +1,5 @@
+Example.lean:14:3 error: unsolved goals
+case inr
+p q : Prop
+h2 : q
+⊢ q ∨ p

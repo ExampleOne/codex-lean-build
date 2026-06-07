@@ -1,0 +1,261 @@
+[
+  {
+    "description": "Runs a command in a PTY, returning output or a session ID for ongoing interaction.",
+    "name": "exec_command",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "cmd": {
+          "description": "Shell command to execute.",
+          "type": "string"
+        },
+        "justification": {
+          "description": "User-facing approval question for `require_escalated`; omit otherwise.",
+          "type": "string"
+        },
+        "login": {
+          "description": "True runs the shell with -l/-i semantics; false disables them. Defaults to true.",
+          "type": "boolean"
+        },
+        "max_output_tokens": {
+          "description": "Output token budget. Defaults to 10000 tokens; larger requests may be capped by policy.",
+          "type": "number"
+        },
+        "prefix_rule": {
+          "description": "Reusable approval prefix for `cmd`, only with `sandbox_permissions: \"require_escalated\"`; for example [\"git\", \"pull\"].",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sandbox_permissions": {
+          "description": "Per-command sandbox override. Defaults to `use_default`; use `require_escalated` for unsandboxed execution.",
+          "enum": [
+            "use_default",
+            "require_escalated"
+          ],
+          "type": "string"
+        },
+        "shell": {
+          "description": "Shell binary to launch. Defaults to the user's default shell.",
+          "type": "string"
+        },
+        "tty": {
+          "description": "True allocates a PTY for the command; false or omitted uses plain pipes.",
+          "type": "boolean"
+        },
+        "workdir": {
+          "description": "Working directory for the command. Defaults to the turn cwd.",
+          "type": "string"
+        },
+        "yield_time_ms": {
+          "description": "Wait before yielding output. Defaults to 10000 ms; effective range is 250-30000 ms.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cmd"
+      ],
+      "type": "object"
+    },
+    "strict": false,
+    "type": "function"
+  },
+  {
+    "description": "Writes characters to an existing unified exec session and returns recent output.",
+    "name": "write_stdin",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "chars": {
+          "description": "Bytes to write to stdin. Defaults to empty, which polls without writing.",
+          "type": "string"
+        },
+        "max_output_tokens": {
+          "description": "Output token budget. Defaults to 10000 tokens; larger requests may be capped by policy.",
+          "type": "number"
+        },
+        "session_id": {
+          "description": "Identifier of the running unified exec session.",
+          "type": "number"
+        },
+        "yield_time_ms": {
+          "description": "Wait before yielding output. Non-empty writes default to 250 ms and cap at 30000 ms; empty polls wait 5000-300000 ms by default.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "type": "object"
+    },
+    "strict": false,
+    "type": "function"
+  },
+  {
+    "description": "Updates the task plan.\nProvide an optional explanation and a list of plan items, each with a step and status.\nAt most one step can be in_progress at a time.\n",
+    "name": "update_plan",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "explanation": {
+          "description": "Optional explanation for this plan update.",
+          "type": "string"
+        },
+        "plan": {
+          "description": "The list of steps",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "description": "Step status.",
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "completed"
+                ],
+                "type": "string"
+              },
+              "step": {
+                "description": "Task step text.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "step",
+              "status"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "plan"
+      ],
+      "type": "object"
+    },
+    "strict": false,
+    "type": "function"
+  },
+  {
+    "description": "Request user input for one to three short questions and wait for the response. This tool is only available in Plan mode.",
+    "name": "request_user_input",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "questions": {
+          "description": "Questions to show the user. Prefer 1 and do not exceed 3",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "header": {
+                "description": "Short header label shown in the UI (12 or fewer chars).",
+                "type": "string"
+              },
+              "id": {
+                "description": "Stable identifier for mapping answers (snake_case).",
+                "type": "string"
+              },
+              "options": {
+                "description": "Provide 2-3 mutually exclusive choices. Put the recommended option first and suffix its label with \"(Recommended)\". Do not include an \"Other\" option in this list; the client will add a free-form \"Other\" option automatically.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "description": {
+                      "description": "One short sentence explaining impact/tradeoff if selected.",
+                      "type": "string"
+                    },
+                    "label": {
+                      "description": "User-facing label (1-5 words).",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "question": {
+                "description": "Single-sentence prompt shown to the user.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "header",
+              "question",
+              "options"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "questions"
+      ],
+      "type": "object"
+    },
+    "strict": false,
+    "type": "function"
+  },
+  {
+    "description": "Use the `apply_patch` tool to edit files. This is a FREEFORM tool, so do not wrap the patch in JSON.",
+    "format": {
+      "definition": "start: begin_patch hunk+ end_patch\nbegin_patch: \"*** Begin Patch\" LF\nend_patch: \"*** End Patch\" LF?\n\nhunk: add_hunk | delete_hunk | update_hunk\nadd_hunk: \"*** Add File: \" filename LF add_line+\ndelete_hunk: \"*** Delete File: \" filename LF\nupdate_hunk: \"*** Update File: \" filename LF change_move? change?\n\nfilename: /(.+)/\nadd_line: \"+\" /(.*)/ LF -> line\n\nchange_move: \"*** Move to: \" filename LF\nchange: (change_context | change_line)+ eof_line?\nchange_context: (\"@@\" | \"@@ \" /(.+)/) LF\nchange_line: (\"+\" | \"-\" | \" \") /(.*)/ LF\neof_line: \"*** End of File\" LF\n\n%import common.LF\n",
+      "syntax": "lark",
+      "type": "grammar"
+    },
+    "name": "apply_patch",
+    "type": "custom"
+  },
+  {
+    "description": "View a local image file from the filesystem when visual inspection is needed. Use this for images already available on disk.",
+    "name": "view_image",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Local filesystem path to an image file.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "strict": false,
+    "type": "function"
+  },
+  {
+    "description": "# Tool discovery\n\nSearches over deferred tool metadata with BM25 and exposes matching tools for the next model call.\n\nYou have access to tools from the following sources:\n- Multi-agent tools: Spawn and manage sub-agents.\nSome of the tools may not have been provided to you upfront, and you should use this tool (`tool_search`) to search for the required tools. For MCP tool discovery, always use `tool_search` instead of `list_mcp_resources` or `list_mcp_resource_templates`.",
+    "execution": "client",
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "Maximum number of tools to return. Defaults to 8.",
+          "type": "number"
+        },
+        "query": {
+          "description": "Search query for deferred tools.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "type": "tool_search"
+  },
+  {
+    "external_web_access": false,
+    "type": "web_search"
+  }
+]

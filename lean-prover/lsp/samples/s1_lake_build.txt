@@ -1,0 +1,16 @@
+info: stdout: cloning into '././.lake/packages/foo'
+[0/5] Computing build jobs
+[1/5] Building foo.Foo
+[2/5] Building Example.Squares
+[3/5] Building Example.Squares:c.o
+[4/5] Building Example
+error: ./Example.lean:14:2: unsolved goals
+case inr
+p q : Prop
+h2 : q
+⊢ q ∨ p
+[4/5] Building Example:c.o
+error: Lean exited with code 1
+Some required builds logged failures:
+- Example
+error: build failed

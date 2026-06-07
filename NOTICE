@@ -1,0 +1,17 @@
+OpenAI Codex
+Copyright 2025 OpenAI
+
+This project includes code derived from [Ratatui](https://github.com/ratatui/ratatui), licensed under the MIT license.
+Copyright (c) 2016-2022 Florian Dehau
+Copyright (c) 2023-2025 The Ratatui Developers
+
+----------------------------------------------------------------------
+
+codex-lean — modifications
+Copyright 2026 the codex-lean contributors
+
+This is a modified version of OpenAI Codex, redistributed under the Apache
+License 2.0. It is an UNOFFICIAL derivative and is NOT affiliated with,
+sponsored by, or endorsed by OpenAI. "Codex" and "OpenAI" are used only
+nominatively to describe the origin of this code (Apache-2.0 §6 does not grant
+trademark rights). See MODIFICATIONS.md for the list of changes.

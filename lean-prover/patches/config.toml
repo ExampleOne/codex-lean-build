@@ -1,0 +1,32 @@
+# Lean-formaliser runtime config (drop into $CODEX_HOME/config.toml).
+#
+# These are the *runtime* token savings that need no recompile: pinning the model,
+# turning off the per-turn approval narrative, and disabling tools/features whose
+# schemas would otherwise be shipped every turn (web_search hosted tool, MCP).
+# The compile-time savings (system prompt + tool cull) come from apply_lean_build.py.
+
+# Most powerful codex model.
+model = "gpt-5.2-codex"
+
+# Autonomous, non-interactive sandbox operation. `never` skips the per-turn
+# approval-policy narrative entirely (the lean prompt already states there is no
+# approval step), and keeps the agent from stalling on confirmations.
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+# No hosted web_search tool schema in the request.
+web_search = "disabled"
+
+# Do NOT configure any [mcp_servers]; with none present the mcp_resource tools and
+# any MCP tool schemas are never added to the request.
+
+[tools]
+# Belt-and-braces: keep the model-visible tool surface minimal even if a future
+# build re-enables extras. (Honoured where the build reads [tools]; the compile-time
+# cull in apply_lean_build.py is the authoritative removal.)
+web_search = false
+view_image = false
+
+# The real wire dump (a) showed request_user_input is ON by default (~345 tok/turn).
+# Disable it — a non-interactive formaliser never asks the user.
+experimental_request_user_input = { enabled = false }

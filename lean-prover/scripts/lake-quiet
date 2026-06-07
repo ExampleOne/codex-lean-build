@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#
+# lake-quiet — run a lake/lean command and drop only the noise the model can't use.
+#
+# In a proof-repair loop, *tool output* dominates context after a few turns:
+# `lake build` prints a progress line per file, repeated import-resolution traces,
+# and ANSI colour, and all of it persists in history across turns. This wrapper
+# removes that noise (progress counters, "Building/Compiling X", downloads, ANSI,
+# duplicate lines) while PRESERVING every diagnostic and its goal state — so the
+# prover still sees `unsolved goals`, the `⊢` target, hypotheses, etc.
+#
+# Usage:  lake-quiet build
+#         lake-quiet env lean Foo/Bar.lean
+#
+# Point the formaliser's shell tool at this instead of raw `lake`.
+set -uo pipefail
+
+raw="$(lake "$@" 2>&1)"
+status=$?
+
+printf '%s\n' "$raw" \
+  | sed -E 's/\x1b\[[0-9;]*[mK]//g' \
+  | grep -vE '^(Building |Compiling |info: downloading|Computing build jobs|\[[0-9]+/[0-9]+\])' \
+  | awk 'NF==0 {if(blank++){next}} NF{blank=0} !($0 in seen){seen[$0]; print} ($0 in seen){next}'
+
+echo "--- (lake exit $status; noise filtered by lake-quiet) ---"
+exit $status

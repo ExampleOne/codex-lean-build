@@ -1,0 +1,4 @@
+add_zero (a : M) : a + 0 = a
+Nat.add_zero (n : ℕ) : n + 0 = n
+zero_add (a : M) : 0 + a = a
+add_comm (a b : M) : a + b = b + a
