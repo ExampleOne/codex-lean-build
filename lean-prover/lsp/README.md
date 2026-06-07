@@ -46,10 +46,36 @@ So the earlier "structured diagnostics instead of build logs is a big win" claim
 > table; it needs an end-to-end proof-loop benchmark to quantify.
 
 ## Recommendation
-Keep `lake-quiet` for build feedback. Add **one** LSP-backed tool focused on lemma
-discovery + on-demand goal queries (not a full LSP tool suite — that re-adds schema
+Keep `lake-quiet` for build feedback. Add **one** LSP-backed tool surface focused on
+lemma discovery + on-demand goal queries (not a full LSP suite — that re-adds schema
 tokens). Net: small per-turn token change, but fewer turns and much cheaper lemma
 lookup.
+
+## Wired in: lean-lsp-mcp (done)
+
+Rather than ship the hand-rolled `lean_lsp_client.py`, the build now wires in the
+mature **[lean-lsp-mcp](https://github.com/oOo0oOo/lean-lsp-mcp)** (MIT) — see
+`patches/config.toml` (`[mcp_servers.lean-lsp]`) and the updated system prompt. We
+expose only the 5 essential tools **directly** (`lean_goal`,
+`lean_diagnostic_messages`, `lean_leansearch`, `lean_state_search`,
+`lean_local_search`) via `LEAN_MCP_DISABLED_TOOLS`, and keep `tool_search` culled.
+
+Token cost (measured by `measure_mcp_tools.py`, same method as the exact dump):
+
+| | tok/turn |
+|---|--:|
+| 5 lean-lsp tool schemas | 747 |
+| prompt growth (tool guidance) | +217 |
+| **lean + lean-lsp (instr+tools)** | **2411** |
+| stock Codex (instr+tools) | 6269 |
+| **still under stock** | **62%** |
+
+So adding the LSP capability keeps us far under stock *and* buys the 91% lemma-search
+win. **Exposure note:** direct is correct for this small always-used set; if you ever
+expose the full ~11-tool suite or add more MCP servers, re-enable `tool_search` so
+Codex **defers** their schemas (`mcp_tool_exposure.rs`: `should_defer` requires
+`search_tool_enabled`). Exact-to-the-byte numbers need a live dump with `uvx
+lean-lsp-mcp` running (needs a Lean toolchain); this is the faithful schema-level cost.
 
 ## Run it live
 The token install was blocked here, so the LSP numbers above are from reconstructed

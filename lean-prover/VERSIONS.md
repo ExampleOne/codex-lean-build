@@ -121,9 +121,27 @@ Benchmarked a thin Lean LSP client against the `lake-quiet` wrapper (`lsp/bench.
 Honest finding: `lake-quiet` **already** removes the build-progress noise (S3), so the
 LSP barely beats it on diagnostics. The LSP's distinctive, additive win is **lemma
 discovery** (S2: structured search vs grepping Mathlib) plus **incremental checking
-that cuts the number of turns** (latency, not per-message tokens). Recommendation:
-keep `lake-quiet`; add **one** LSP-backed lemma-search/goal tool, not a full LSP
-suite (which would re-add schema tokens). Details + the working client in `lsp/`.
+that cuts the number of turns** (latency, not per-message tokens).
+
+### v5 — Wire in lean-lsp-mcp (5 essential tools)  ·  +964 tok/turn, net still 62% under stock
+Rather than ship a hand-rolled client, the build wires the mature
+[lean-lsp-mcp](https://github.com/oOo0oOo/lean-lsp-mcp) (MIT) via
+`patches/config.toml`, exposing only `lean_goal`, `lean_diagnostic_messages`,
+`lean_leansearch`, `lean_state_search`, `lean_local_search` **directly**
+(`LEAN_MCP_DISABLED_TOOLS`), with `tool_search` kept culled.
+
+| | tok/turn |
+|---|--:|
+| lean (no lsp) instr+tools | 1447 |
+| + 5 lean-lsp tool schemas | +747 |
+| + prompt tool guidance | +217 |
+| **lean + lean-lsp** | **2411** |
+| vs stock Codex 6269 | **62% under** |
+
+Buys the 91% lemma-search win while staying far under stock. **Exposure rule** (from
+`mcp_tool_exposure.rs`): direct is optimal for this small always-used set; expose the
+full ~11-tool suite only if you re-enable `tool_search` so Codex defers the schemas.
+Measured by `lsp/measure_mcp_tools.py`; exact-to-byte needs a live dump with `uvx`.
 
 ## Further work (additional headroom, not yet applied)
 - **Strip the personality scaffold** in `models-manager/src/model_info.rs` (ship

@@ -17,8 +17,22 @@ sandbox_mode = "workspace-write"
 # No hosted web_search tool schema in the request.
 web_search = "disabled"
 
-# Do NOT configure any [mcp_servers]; with none present the mcp_resource tools and
-# any MCP tool schemas are never added to the request.
+# --- lean-lsp-mcp integration ---------------------------------------------
+# Gives the agent structured goal/diagnostics + lemma search (the LSP's real win)
+# instead of grepping Mathlib. We expose only the 5 essential tools DIRECTLY (~747
+# tok/turn); tool_search stays culled, so don't enable the full suite without it.
+# Requires `uvx` (uv) and a Lean toolchain on PATH; set LEAN_PROJECT_PATH per run.
+[mcp_servers.lean-lsp]
+command = "uvx"
+args = ["lean-lsp-mcp"]
+startup_timeout_sec = 60
+tool_timeout_sec = 120
+[mcp_servers.lean-lsp.env]
+LEAN_PROJECT_PATH = "."
+# Keep only: lean_goal, lean_diagnostic_messages, lean_leansearch,
+# lean_state_search, lean_local_search. Disable the rest to keep the upfront tool
+# payload small. (Confirm exact names against `uvx lean-lsp-mcp` if any change.)
+LEAN_MCP_DISABLED_TOOLS = "lean_build,lean_run_code,lean_multi_attempt,lean_verify,lean_hammer_premise,lean_loogle"
 
 [tools]
 # Belt-and-braces: keep the model-visible tool surface minimal even if a future
