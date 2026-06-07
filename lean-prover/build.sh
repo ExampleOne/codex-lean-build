@@ -24,7 +24,10 @@ if [[ "${FORCE_COPY:-0}" == "1" || ! -d "$DST" ]]; then
     "$SRC/" "$DST/"
 fi
 
-echo ">> Applying lean optimisations..." >&2
+echo ">> Generating runtime config from lean-prover.toml..." >&2
+python3 "$HERE/scripts/gen_config.py"
+
+echo ">> Applying lean optimisations (prompt + culls from lean-prover.toml)..." >&2
 python3 "$HERE/scripts/apply_lean_build.py" "$DST"
 
 # Install the lake-quiet wrapper next to the build for convenience.

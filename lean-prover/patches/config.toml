@@ -1,27 +1,18 @@
-# Lean-formaliser runtime config (drop into $CODEX_HOME/config.toml).
-#
-# These are the *runtime* token savings that need no recompile: pinning the model,
-# turning off the per-turn approval narrative, and disabling tools/features whose
-# schemas would otherwise be shipped every turn (web_search hosted tool, MCP).
-# The compile-time savings (system prompt + tool cull) come from apply_lean_build.py.
+# GENERATED from lean-prover.toml by scripts/gen_config.py — do not edit by hand.
+# Drop into $CODEX_HOME/config.toml (run.sh does this automatically).
 
-# Most powerful codex model.
 model = "gpt-5.2-codex"
-
-# Autonomous, non-interactive sandbox operation. `never` skips the per-turn
-# approval-policy narrative entirely (the lean prompt already states there is no
-# approval step), and keeps the agent from stalling on confirmations.
 approval_policy = "never"
 sandbox_mode = "workspace-write"
-
-# No hosted web_search tool schema in the request.
 web_search = "disabled"
 
-# --- lean-lsp-mcp integration ---------------------------------------------
-# Gives the agent structured goal/diagnostics + lemma search (the LSP's real win)
-# instead of grepping Mathlib. We expose only the 5 essential tools DIRECTLY (~747
-# tok/turn); tool_search stays culled, so don't enable the full suite without it.
-# Requires `uvx` (uv) and a Lean toolchain on PATH; set LEAN_PROJECT_PATH per run.
+[tools]
+web_search = false
+view_image = false
+experimental_request_user_input = { enabled = false }
+
+# --- lean-lsp-mcp (structured goal/diagnostics + lemma search) ---
+# Exposes only: lean_goal, lean_diagnostic_messages, lean_leansearch, lean_state_search, lean_local_search
 [mcp_servers.lean-lsp]
 command = "uvx"
 args = ["lean-lsp-mcp"]
@@ -29,18 +20,4 @@ startup_timeout_sec = 60
 tool_timeout_sec = 120
 [mcp_servers.lean-lsp.env]
 LEAN_PROJECT_PATH = "."
-# Keep only: lean_goal, lean_diagnostic_messages, lean_leansearch,
-# lean_state_search, lean_local_search. Disable the rest to keep the upfront tool
-# payload small. (Confirm exact names against `uvx lean-lsp-mcp` if any change.)
-LEAN_MCP_DISABLED_TOOLS = "lean_build,lean_run_code,lean_multi_attempt,lean_verify,lean_hammer_premise,lean_loogle"
-
-[tools]
-# Belt-and-braces: keep the model-visible tool surface minimal even if a future
-# build re-enables extras. (Honoured where the build reads [tools]; the compile-time
-# cull in apply_lean_build.py is the authoritative removal.)
-web_search = false
-view_image = false
-
-# The real wire dump (a) showed request_user_input is ON by default (~345 tok/turn).
-# Disable it — a non-interactive formaliser never asks the user.
-experimental_request_user_input = { enabled = false }
+LEAN_MCP_DISABLED_TOOLS = "lean_build,lean_run_code,lean_multi_attempt,lean_verify,lean_loogle,lean_hammer_premise"

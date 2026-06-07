@@ -143,6 +143,34 @@ Buys the 91% lemma-search win while staying far under stock. **Exposure rule** (
 full ~11-tool suite only if you re-enable `tool_search` so Codex defers the schemas.
 Measured by `lsp/measure_mcp_tools.py`; exact-to-byte needs a live dump with `uvx`.
 
+## Build configuration
+
+All the above is driven by **`lean-prover.toml`** (single source of truth): the system
+prompt file, which compile-time culls to apply (`[cull]`), runtime knobs (`[runtime]`),
+and the lean-lsp tool set (`[lean_lsp]`). `scripts/apply_lean_build.py` reads it for the
+compile-time patches; `scripts/gen_config.py` generates `patches/config.toml` from it.
+`build.sh` runs both. Change behaviour without touching scripts or config by hand.
+
+## Verified / prototyped (the recommended next steps)
+
+### Prompt caching — VERIFIED engaged
+`client.rs::prompt_cache_key()` returns the `thread_id`, stable across all turns in a
+session, and the cached prefix is `instructions` + `tools` (both static in this build;
+`environment_context`/date lives in the *input*, after the prefix). So from turn 2 the
+fixed system-prompt+tools prefix bills as cached (~10× cheaper input). **Opportunity:**
+a *constant* cache key would share that prefix across *all* proof sessions (a fleet),
+not just within one — currently only wired for guardian review sessions
+(`with_prompt_cache_key_override`); exposing it generally is a small hook. Reserved as
+`[cache].prompt_cache_key` in `lean-prover.toml`.
+
+### Proof-tuned history compaction — PROTOTYPED
+`scripts/compaction_prototype.py` demonstrates dropping *superseded* diagnostics
+(keep only the latest tool output per file, stub the rest). Over a 30-turn repair loop
+it cuts cumulative diagnostic input tokens **~51–59%** (and final-turn context ~1530→~600).
+Integration point: `context_manager/history.rs::for_prompt` (which already mutates
+`FunctionCallOutput` history — it strips images there), so the transform runs each turn
+just before the prompt is built. Complements `lake-quiet` (per-output) and caching.
+
 ## Further work (additional headroom, not yet applied)
 - **Strip the personality scaffold** in `models-manager/src/model_info.rs` (ship
   `BASE_INSTRUCTIONS` raw instead of `DEFAULT_PERSONALITY_HEADER + … + BASE_INSTRUCTIONS`).
@@ -154,5 +182,6 @@ Measured by `lsp/measure_mcp_tools.py`; exact-to-byte needs a live dump with `uv
   line-range edit tool (~300 tok) — Lean edits are small and localised.
 - **Trim the environment-context block** (`environment_context.rs`) to cwd + Lean
   toolchain version; drop network/permission XML.
-- **Cap/trim history**: a `lake-quiet`-style filter applied retroactively at
-  compaction time would shrink the persisted log further.
+- **Land the history compaction in Rust** (`history.rs::for_prompt`) — prototyped above,
+  ~51–59% on cumulative diagnostics; remaining work is the Rust transform + a test.
+- **Expose `prompt_cache_key`** generally (constant key) for cross-session cache reuse.

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Apply the lean-formaliser optimisations to a Codex `codex-rs` checkout.
 
-Every edit is anchored to a unique string and asserts the anchor exists, so the
-patcher fails loudly rather than silently corrupting source if upstream moves.
+Compile-time changes are driven by ../lean-prover.toml ([prompt] + [cull]); runtime
+config is handled separately by gen_config.py. Every edit is anchored to a unique
+string and asserts the anchor exists, so the patcher fails loudly rather than
+silently corrupting source if upstream moves.
 
 Usage:
     python apply_lean_build.py <path-to-codex-rs>
@@ -11,9 +13,40 @@ Idempotent: re-running on an already-patched tree is a no-op (anchors gone -> sk
 """
 import os
 import sys
+import tomllib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-LEAN_PROMPT = os.path.join(HERE, "..", "prompt", "lean_formaliser_prompt.md")
+MANIFEST = os.path.join(HERE, "..", "lean-prover.toml")
+
+# Anchored edits for each compile-time cull, keyed by the [cull] flag name.
+# The culled handlers are bound to `_` / forced-early-return rather than deleted,
+# so their imports stay used and the build stays warning-clean.
+CULL_PATCHES = {
+    "update_plan": (
+        "core/src/tools/spec_plan.rs",
+        "    planned_tools.add(PlanHandler);\n",
+        "    let _ = PlanHandler; // [lean] update_plan not exposed to the model\n",
+        True,
+    ),
+    "view_image": (
+        "core/src/tools/spec_plan.rs",
+        "        planned_tools.add(ViewImageHandler::new(ViewImageToolOptions {",
+        "        let _ = (ViewImageHandler::new(ViewImageToolOptions { // [lean] view_image not exposed",
+        True,
+    ),
+    "tool_search": (
+        "core/src/tools/spec_plan.rs",
+        "    if !(search_tool_enabled(turn_context) && namespace_tools_enabled(turn_context)) {",
+        "    if true /* [lean] tool_search never exposed */ "
+        "|| !(search_tool_enabled(turn_context) && namespace_tools_enabled(turn_context)) {",
+        True,
+    ),
+}
+
+
+def load_manifest():
+    with open(MANIFEST, "rb") as f:
+        return tomllib.load(f)
 
 
 def replace_file(path, content, label):
@@ -46,37 +79,27 @@ def main():
     if not os.path.isdir(os.path.join(rs, "core", "src")):
         sys.exit(f"not a codex-rs checkout: {rs}")
 
-    lean = open(LEAN_PROMPT).read()
+    cfg = load_manifest()
 
     # 1. System prompt (biggest win): swap both copies of the base instructions.
+    prompt_file = os.path.join(HERE, "..", cfg["prompt"]["file"])
+    lean = open(prompt_file).read()
+    print(f"[prompt] source: {cfg['prompt']['file']}")
     replace_file(os.path.join(rs, "models-manager", "prompt.md"), lean,
                  "models-manager/prompt.md (BASE_INSTRUCTIONS)")
     replace_file(os.path.join(rs, "protocol", "src", "prompts", "base_instructions", "default.md"),
                  lean, "base_instructions/default.md")
 
-    # 2. Cull tools the formaliser never uses: update_plan + view_image.
-    #    We bind to `_` instead of deleting the `.add(...)` call, so the handler
-    #    imports stay "used" (no unused-import warnings / clippy failures). The
-    #    handler is constructed but never registered -> not in the registry and
-    #    never sent to the model, which is the whole point.
-    spec = os.path.join(rs, "core", "src", "tools", "spec_plan.rs")
-    patch(spec,
-          "    planned_tools.add(PlanHandler);\n",
-          "    let _ = PlanHandler; // [lean] update_plan not exposed to the model\n",
-          "drop update_plan from model-visible tools")
-    patch(spec,
-          "        planned_tools.add(ViewImageHandler::new(ViewImageToolOptions {",
-          "        let _ = (ViewImageHandler::new(ViewImageToolOptions { // [lean] view_image not exposed",
-          "drop view_image from model-visible tools")
-    # tool_search (~193 tok, revealed by the real wire dump) — force the early return.
-    patch(spec,
-          "    if !(search_tool_enabled(turn_context) && namespace_tools_enabled(turn_context)) {",
-          "    if true /* [lean] tool_search never exposed */ "
-          "|| !(search_tool_enabled(turn_context) && namespace_tools_enabled(turn_context)) {",
-          "drop tool_search from model-visible tools")
+    # 2. Tool culls — apply only the ones enabled in [cull].
+    cull = cfg.get("cull", {})
+    for name, (rel, old, new, required) in CULL_PATCHES.items():
+        if cull.get(name, False):
+            patch(os.path.join(rs, rel), old, new, f"cull {name}", required)
+        else:
+            print(f"[keep ] {name} (cull disabled in lean-prover.toml)")
 
-    print("\nDone. Build with:  (cd %s && cargo build --release -p codex-cli --bin codex)" % rs)
-    print("Note: also disable web_search/MCP/multi-agent via config (see patches/config.toml).")
+    print("\nDone. Runtime config: run scripts/gen_config.py (or ./build.sh, which does both).")
+    print("Then build:  (cd %s && cargo build --release -p codex-cli --bin codex)" % rs)
 
 
 if __name__ == "__main__":

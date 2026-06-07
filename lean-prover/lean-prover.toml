@@ -1,0 +1,65 @@
+# codex-lean build configuration — single source of truth.
+#
+# This drives BOTH:
+#   - scripts/apply_lean_build.py  (compile-time: prompt swap + tool culls in codex-rs)
+#   - scripts/gen_config.py        (runtime: writes patches/config.toml)
+# Edit here, then re-run ./build.sh — no need to touch the scripts or config.toml.
+
+[prompt]
+# System prompt that replaces Codex's BASE_INSTRUCTIONS (the single biggest token
+# lever: ~4371 -> ~391 tok). Point this at any prompt file to retarget the agent.
+file = "prompt/lean_formaliser_prompt.md"
+
+[model]
+slug = "gpt-5.2-codex"          # most powerful codex model in this tree
+
+[cache]
+# Prompt caching is ALREADY engaged per-session (key = thread_id). Setting a constant
+# here would let ALL proof sessions share the cached system-prompt+tools prefix.
+# RESERVED: needs a small code hook (mirror with_prompt_cache_key_override in
+# session.rs); not yet consumed by gen_config.py. Leave empty to keep per-session keys.
+prompt_cache_key = ""
+
+# --- compile-time tool culls (applied to codex-rs by apply_lean_build.py) -----
+# true => the tool is removed from the model-visible set. Tokens are the exact
+# per-turn wire cost measured from the real request (measurements/measure_exact.py).
+[cull]
+update_plan = true              # 199 tok — no planning tool in a proof loop
+view_image  = true             # 91 tok  — a Lean formaliser never inspects images
+tool_search = true             # 193 tok — see WARNING below if you enable many MCP tools
+
+# --- runtime config (written verbatim into patches/config.toml) --------------
+[runtime]
+approval_policy    = "never"          # sandbox-only, non-interactive; drops ~785 tok narrative
+sandbox_mode       = "workspace-write"
+web_search         = "disabled"        # removes the hosted web_search tool stub
+request_user_input = false             # ~345 tok — never ask the user
+
+# --- lean-lsp-mcp integration -------------------------------------------------
+# Structured goal/diagnostics + lemma search instead of grepping Mathlib.
+# Only `keep` tools are exposed (the rest go to LEAN_MCP_DISABLED_TOOLS), so the
+# upfront tool payload stays small while tool_search is culled.
+[lean_lsp]
+enabled            = true
+command            = "uvx"
+args               = ["lean-lsp-mcp"]
+project_path       = "."
+startup_timeout_sec = 60
+tool_timeout_sec    = 120
+keep = [
+  "lean_goal",
+  "lean_diagnostic_messages",
+  "lean_leansearch",
+  "lean_state_search",
+  "lean_local_search",
+]
+# Full known tool set; anything here but not in `keep` is disabled.
+all = [
+  "lean_goal", "lean_diagnostic_messages", "lean_build", "lean_run_code",
+  "lean_multi_attempt", "lean_verify", "lean_local_search", "lean_leansearch",
+  "lean_loogle", "lean_hammer_premise", "lean_state_search",
+]
+
+# WARNING: cull.tool_search=true means MCP tools are exposed DIRECTLY (every schema
+# every turn). That's optimal for a small `keep` set (<=~6). If you enable many MCP
+# tools, set cull.tool_search=false so Codex DEFERS their schemas (load on demand).

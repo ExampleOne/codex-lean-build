@@ -29,9 +29,11 @@ cd codex-rs && cargo test -p codex-core --test all \
 ## Layout
 | Path | What |
 |---|---|
-| `VERSIONS.md` | Versioning history v0→v4 + exact token accounting (start here) |
-| `prompt/lean_formaliser_prompt.md` | The 391-tok system prompt (replaces the 4371-tok default) |
-| `scripts/apply_lean_build.py` | Anchored patcher: prompt swap + tool cull on a `codex-rs` checkout |
+| `lean-prover.toml` | **Single config** — prompt, tool culls, runtime knobs, lean-lsp tools |
+| `VERSIONS.md` | Versioning history v0→v5 + exact token accounting (start here) |
+| `prompt/lean_formaliser_prompt.md` | The system prompt (replaces the 4371-tok default) |
+| `scripts/apply_lean_build.py` | Anchored patcher (reads `lean-prover.toml`): prompt swap + enabled culls |
+| `scripts/gen_config.py` | Generates `patches/config.toml` from `lean-prover.toml` |
 | `measurements/measure_exact.py` | **Exact** token accounting from the real wire dump |
 | `measurements/baseline_*.{txt,json}` | Committed snapshot of the real serialized request |
 | `scripts/token_estimate.py` | Older source-literal *estimate* (superseded by measure_exact) |
