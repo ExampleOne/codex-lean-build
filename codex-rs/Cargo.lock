@@ -10333,7 +10333,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
- "heck 0.4.1",
+ "heck 0.5.0",
  "itertools 0.11.0",
  "log",
  "multimap",
@@ -10353,7 +10353,7 @@ version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "343d3bd7056eda839b03204e68deff7d1b13aba7af2b2fd16890697274262ee7"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "itertools 0.14.0",
  "log",
  "multimap",
@@ -11487,7 +11487,7 @@ dependencies = [
  "security-framework 3.5.1",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -13497,9 +13497,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-build"
-version = "0.14.3"
+version = "0.14.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27aac809edf60b741e2d7db6367214d078856b8a5bff0087e94ff330fb97b6fc"
+checksum = "c68f61875ac5293cf72e6c8cf0158086428c82c37229e98c840878f1706b0322"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -13520,9 +13520,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-prost-build"
-version = "0.14.3"
+version = "0.14.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4556786613791cfef4ed134aa670b61a85cfcacf71543ef33e8d801abae988f"
+checksum = "654e5643eff75d7f8c99197ce1440ed19a3474eada74c12bbac488b2cafdae27"
 dependencies = [
  "prettyplease",
  "proc-macro2",
