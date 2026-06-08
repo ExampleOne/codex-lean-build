@@ -1,84 +1,72 @@
-<!--
-  codex-lean-build — an UNOFFICIAL, token-optimised derivative of OpenAI Codex for
-  Lean 4 / Mathlib formalisation. NOT affiliated with or endorsed by OpenAI.
-  Modifications: see MODIFICATIONS.md.  Lean layer & docs: see lean-prover/README.md.
-  Licensed under Apache-2.0 (LICENSE); upstream attribution in NOTICE.
--->
-> **codex-lean** — unofficial, token-optimised fork of OpenAI Codex specialised for
-> **Lean 4 / Mathlib formalisation**. See [`lean-prover/`](lean-prover/README.md) for
-> the optimisation layer and [`MODIFICATIONS.md`](MODIFICATIONS.md) for changes.
-> Not affiliated with OpenAI. Apache-2.0 (see `LICENSE`/`NOTICE`).
+# codex-lean
 
----
+A **token-optimised build of [OpenAI Codex](https://github.com/openai/codex)
+specialised for autonomous Lean 4 / Mathlib formalisation.** It strips the general
+coding agent down to what a theorem prover actually needs, so a long proof-repair
+loop costs a fraction of the tokens.
 
-<p align="center"><strong>Codex CLI</strong> is a coding agent from OpenAI that runs locally on your computer.
-<p align="center">
-  <img src="https://github.com/openai/codex/blob/main/.github/codex-cli-splash.png" alt="Codex CLI splash" width="80%" />
-</p>
-</br>
-If you want Codex in your code editor (VS Code, Cursor, Windsurf), <a href="https://developers.openai.com/codex/ide">install in your IDE.</a>
-</br>If you want the desktop app experience, run <code>codex app</code> or visit <a href="https://chatgpt.com/codex?app-landing-page=true">the Codex App page</a>.
-</br>If you are looking for the <em>cloud-based agent</em> from OpenAI, <strong>Codex Web</strong>, go to <a href="https://chatgpt.com/codex">chatgpt.com/codex</a>.</p>
+> **Unofficial** derivative of OpenAI Codex (Apache-2.0). **Not** affiliated with or
+> endorsed by OpenAI. "Codex" is used only to describe origin. See
+> [`LICENSE`](LICENSE), [`NOTICE`](NOTICE), [`MODIFICATIONS.md`](MODIFICATIONS.md).
 
----
+## Headline result
 
-## Quickstart
+**~79% reduction in fixed per-turn input overhead** (~7084 → ~1477 tokens),
+**measured exactly** from the real serialized Responses-API request — not estimated.
+Over a 50-turn proof-repair run that's ~280k input tokens saved on fixed overhead
+alone, before the output-side and history wins below.
 
-### Installing and running Codex CLI
-
-Run the following on Mac or Linux to install Codex CLI:
-
-```shell
-curl -fsSL https://chatgpt.com/codex/install.sh | sh
+Reproduce from the committed wire dump:
+```bash
+python3 -m venv /tmp/tkenv && /tmp/tkenv/bin/pip install tiktoken
+/tmp/tkenv/bin/python lean-prover/measurements/measure_exact.py
 ```
 
-Run the following on Windows to install Codex CLI:
+## How it works
 
+| Lever | What it does | Effect |
+|---|---|---|
+| **Lean system prompt** | Replaces the ~4371-tok general coding-agent prompt with a 391-tok formaliser prompt | −3980 tok/turn |
+| **Tool cull** | Drops `update_plan`, `view_image`, `tool_search`, `request_user_input`, `web_search` | 1699 → 857 tok |
+| **Sandbox-only** | `approval_policy=never`, no per-turn approval narrative | −785 tok/turn |
+| **`lake-quiet`** | Strips build-progress noise from compiler output | ~63% per build |
+| **lean-lsp-mcp** | Structured goals + lemma search instead of grepping Mathlib | 91% cheaper lemma lookup |
+| **History compaction** | Stubs superseded diagnostics each turn (`history.rs`) | ~51–59% of cumulative diagnostics |
+| **Prompt caching** | Fixed prompt+tools prefix is cache-stable | ~10× cheaper input on the prefix |
+
+Full accounting and the version-by-version history: **[`lean-prover/VERSIONS.md`](lean-prover/VERSIONS.md)**.
+LSP analysis and benchmark: [`lean-prover/lsp/`](lean-prover/lsp/README.md).
+
+## Build & run
+
+```bash
+cd lean-prover
+./build.sh                                   # patch + cargo build the optimised binary
+./run.sh exec "prove the lemmas in MyProject/Foo.lean"
 ```
-powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
-```
+Everything is driven by one config file, **[`lean-prover/lean-prover.toml`](lean-prover/lean-prover.toml)**
+(prompt, tool culls, runtime knobs, lean-lsp tools). Build notes — including the
+parallel-fetch workaround for V8/WebRTC prebuilts behind a throttling VPN/proxy — are
+in **[`lean-prover/BUILDING.md`](lean-prover/BUILDING.md)**.
 
-Codex CLI can also be installed via the following package managers:
+## Status
 
-```shell
-# Install using npm
-npm install -g @openai/codex
-```
+- ✅ Builds: a 193 MB `codex` release binary that runs and is verified to embed the
+  Lean prompt + tool culls + history compaction.
+- ✅ Token numbers measured exactly from the real request; compaction unit-tested.
+- ⏳ A live end-to-end run against a real Lean project requires a Lean toolchain
+  (`elan` + Mathlib) on the host.
 
-```shell
-# Install using Homebrew
-brew install --cask codex
-```
+## Layout
 
-Then simply run `codex` to get started.
+| Path | What |
+|---|---|
+| `lean-prover/` | The optimisation layer, config, docs, measurements, LSP, build scripts |
+| `codex-rs/` | The vendored Codex source it builds (with an additive measurement helper) |
+| `MODIFICATIONS.md` | Exactly what changed vs upstream Codex (Apache-2.0 §4b) |
 
-<details>
-<summary>You can also go to the <a href="https://github.com/openai/codex/releases/latest">latest GitHub Release</a> and download the appropriate binary for your platform.</summary>
+## License
 
-Each GitHub Release contains many executables, but in practice, you likely want one of these:
-
-- macOS
-  - Apple Silicon/arm64: `codex-aarch64-apple-darwin.tar.gz`
-  - x86_64 (older Mac hardware): `codex-x86_64-apple-darwin.tar.gz`
-- Linux
-  - x86_64: `codex-x86_64-unknown-linux-musl.tar.gz`
-  - arm64: `codex-aarch64-unknown-linux-musl.tar.gz`
-
-Each archive contains a single entry with the platform baked into the name (e.g., `codex-x86_64-unknown-linux-musl`), so you likely want to rename it to `codex` after extracting it.
-
-</details>
-
-### Using Codex with your ChatGPT plan
-
-Run `codex` and select **Sign in with ChatGPT**. We recommend signing into your ChatGPT account to use Codex as part of your Plus, Pro, Business, Edu, or Enterprise plan. [Learn more about what's included in your ChatGPT plan](https://help.openai.com/en/articles/11369540-codex-in-chatgpt).
-
-You can also use Codex with an API key, but this requires [additional setup](https://developers.openai.com/codex/auth#sign-in-with-an-api-key).
-
-## Docs
-
-- [**Codex Documentation**](https://developers.openai.com/codex)
-- [**Contributing**](./docs/contributing.md)
-- [**Installing & building**](./docs/install.md)
-- [**Open source fund**](./docs/open-source-fund.md)
-
-This repository is licensed under the [Apache-2.0 License](LICENSE).
+Apache License 2.0 — see [`LICENSE`](LICENSE). This is a derivative work of OpenAI
+Codex; upstream attribution is in [`NOTICE`](NOTICE) and the list of changes is in
+[`MODIFICATIONS.md`](MODIFICATIONS.md).

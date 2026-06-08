@@ -52,7 +52,8 @@ cd codex-rs && cargo test -p codex-core --test all \
 the runtime ones live in `patches/config.toml` (installed into the isolated
 `CODEX_HOME` by `run.sh`).
 
-> Status: the prompt, config, wrapper, estimate, and patcher are complete and the
-> patcher is anchored/idempotent. A full `cargo build` to validate compilation of
-> the registry edits has **not** been run here — do that with `./build.sh` before
-> shipping.
+> Status: **validated** — `./build.sh` produces a 193 MB `codex` release binary that
+> runs and is verified to embed the Lean prompt + tool culls + history compaction;
+> the compaction is unit-tested and the token numbers come from the real wire dump.
+> The one remaining gap is a live end-to-end run against a real Lean project (needs a
+> Lean toolchain on the host). Build notes: [`BUILDING.md`](BUILDING.md).
