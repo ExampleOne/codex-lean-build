@@ -97,5 +97,6 @@ __pycache__/
 target/
 **/target/
 lean-prover/codex-lean/
+lean-prover/.webrtc-prebuilt/
 .codex-home/
 **/.codex-home/
