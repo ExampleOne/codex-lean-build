@@ -163,13 +163,20 @@ not just within one — currently only wired for guardian review sessions
 (`with_prompt_cache_key_override`); exposing it generally is a small hook. Reserved as
 `[cache].prompt_cache_key` in `lean-prover.toml`.
 
-### Proof-tuned history compaction — PROTOTYPED
-`scripts/compaction_prototype.py` demonstrates dropping *superseded* diagnostics
-(keep only the latest tool output per file, stub the rest). Over a 30-turn repair loop
-it cuts cumulative diagnostic input tokens **~51–59%** (and final-turn context ~1530→~600).
-Integration point: `context_manager/history.rs::for_prompt` (which already mutates
-`FunctionCallOutput` history — it strips images there), so the transform runs each turn
-just before the prompt is built. Complements `lake-quiet` (per-output) and caching.
+### Proof-tuned history compaction — LANDED (Rust, tested)
+Implemented in `context_manager/history.rs::for_prompt`: each turn, superseded
+diagnostic/build tool outputs are replaced with a one-line stub, keeping only the
+latest output per `(tool, target)` — `lean_diagnostic_messages` per file,
+`lean_build`/`lake build` globally (`lean_goal` left untouched: it's positional).
+Gated by `CODEX_COMPACT_SUPERSEDED_DIAGNOSTICS` (off by default; `run.sh` exports it
+from `lean-prover.toml [runtime].compact_superseded_diagnostics`). Unit-tested
+(`compacts_superseded_diagnostics_keeping_latest_per_file`).
+
+What it buys (`scripts/compaction_prototype.py`): over a 30-turn repair loop, **~51–59%**
+fewer cumulative diagnostic input tokens (final-turn context ~1530→~600). Also removes
+already-fixed errors that could mislead the model. **Caching interaction:** rewriting an
+older output is a one-time cache miss for that region; the stub is then stable and
+re-caches, so the net is positive. Complements `lake-quiet` (per-output filter).
 
 ## Further work (additional headroom, not yet applied)
 - **Strip the personality scaffold** in `models-manager/src/model_info.rs` (ship
@@ -182,6 +189,5 @@ just before the prompt is built. Complements `lake-quiet` (per-output) and cachi
   line-range edit tool (~300 tok) — Lean edits are small and localised.
 - **Trim the environment-context block** (`environment_context.rs`) to cwd + Lean
   toolchain version; drop network/permission XML.
-- **Land the history compaction in Rust** (`history.rs::for_prompt`) — prototyped above,
-  ~51–59% on cumulative diagnostics; remaining work is the Rust transform + a test.
 - **Expose `prompt_cache_key`** generally (constant key) for cross-session cache reuse.
+- **Compile the full release binary** (`./build.sh`) to validate all edits together.
