@@ -1,0 +1,15 @@
+# GENERATED from lean-prover.toml by scripts/gen_config.py — do not edit by hand.
+# Drop into $CODEX_HOME/config.toml (run.sh does this automatically).
+
+model = "gpt-5.2-codex"
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+web_search = "disabled"
+
+[tools]
+web_search = false
+view_image = false
+experimental_request_user_input = { enabled = false }
+
+# no-LSP runtime mode (run.sh --no-lsp): the lean-lsp MCP is omitted here, and
+# run.sh appends an absolute model-instructions override to the shell+grep prompt.

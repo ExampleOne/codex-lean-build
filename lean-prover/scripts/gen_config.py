@@ -11,6 +11,7 @@ import tomllib
 HERE = os.path.dirname(os.path.abspath(__file__))
 MANIFEST = os.path.join(HERE, "..", "lean-prover.toml")
 OUT = os.path.join(HERE, "..", "patches", "config.toml")
+OUT_NOLSP = os.path.join(HERE, "..", "patches", "config.no-lsp.toml")
 
 
 def main():
@@ -37,6 +38,8 @@ def main():
         f'experimental_request_user_input = {{ enabled = {str(rt["request_user_input"]).lower()} }}',
     ]
 
+    base = list(lines)  # config WITHOUT the MCP server — used for runtime --no-lsp
+
     if lsp.get("enabled"):
         disabled = [t for t in lsp.get("all", []) if t not in lsp.get("keep", [])]
         keep = lsp.get("keep", [])
@@ -62,7 +65,18 @@ def main():
 
     with open(OUT, "w") as f:
         f.write("\n".join(lines) + "\n")
-    print(f"[gen] wrote {os.path.relpath(OUT)} from lean-prover.toml")
+
+    # Runtime --no-lsp variant: no MCP server. run.sh appends an absolute
+    # model_instructions_file pointing at the shell+grep prompt, so the agent
+    # never references the (now-absent) lean-lsp tools. No rebuild needed.
+    nolsp = base + [
+        "",
+        "# no-LSP runtime mode (run.sh --no-lsp): the lean-lsp MCP is omitted here, and",
+        "# run.sh appends an absolute model-instructions override to the shell+grep prompt.",
+    ]
+    with open(OUT_NOLSP, "w") as f:
+        f.write("\n".join(nolsp) + "\n")
+    print(f"[gen] wrote {os.path.relpath(OUT)} + {os.path.relpath(OUT_NOLSP)} from lean-prover.toml")
 
 
 if __name__ == "__main__":

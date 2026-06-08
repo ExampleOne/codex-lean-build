@@ -34,8 +34,18 @@ python3 -m venv /tmp/tkenv && /tmp/tkenv/bin/pip install tiktoken
 | **History compaction** | Stubs superseded diagnostics each turn (`history.rs`) | ~51–59% of cumulative diagnostics |
 | **Prompt caching** | Fixed prompt+tools prefix is cache-stable | ~10× cheaper input on the prefix |
 
-Full accounting and the version-by-version history: **[`lean-prover/VERSIONS.md`](lean-prover/VERSIONS.md)**.
+**Findings + measured numbers: [`lean-prover/EFFICIENCY.md`](lean-prover/EFFICIENCY.md)**
+(start here). Version-by-version history: [`lean-prover/VERSIONS.md`](lean-prover/VERSIONS.md).
 LSP analysis and benchmark: [`lean-prover/lsp/`](lean-prover/lsp/README.md).
+
+### Two modes
+A single switch trades capability for raw efficiency — set `[lean_lsp].enabled` at
+build time, or flip it **at runtime** with `--no-lsp` (no rebuild):
+
+| Mode | how | instr+tools/turn | vs stock |
+|---|---|--:|--:|
+| **Capability** (default) | `./run.sh …` | ~4167 | ~34% under |
+| **Efficiency** | `./run.sh --no-lsp …` | ~1493 | **~76% under** |
 
 ## Build & run
 
@@ -43,6 +53,7 @@ LSP analysis and benchmark: [`lean-prover/lsp/`](lean-prover/lsp/README.md).
 cd lean-prover
 ./build.sh                                   # patch + cargo build the optimised binary
 ./run.sh exec "prove the lemmas in MyProject/Foo.lean"
+./run.sh --no-lsp exec "..."                 # efficiency mode at runtime (no rebuild)
 ```
 Everything is driven by one config file, **[`lean-prover/lean-prover.toml`](lean-prover/lean-prover.toml)**
 (prompt, tool culls, runtime knobs, lean-lsp tools). Build notes — including the

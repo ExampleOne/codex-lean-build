@@ -29,28 +29,31 @@ cd codex-rs && cargo test -p codex-core --test all \
 ## Layout
 | Path | What |
 |---|---|
+| `EFFICIENCY.md` | **Findings + measured numbers, and the two modes (start here)** |
 | `lean-prover.toml` | **Single config** — prompt, tool culls, runtime knobs, lean-lsp tools |
-| `VERSIONS.md` | Versioning history v0→v5 + exact token accounting (start here) |
-| `prompt/lean_formaliser_prompt.md` | The system prompt (replaces the 4371-tok default) |
+| `VERSIONS.md` | Versioning history v0→v5 + exact token accounting |
+| `prompt/lean_formaliser_prompt.md` · `…_no_lsp.md` | LSP-aware / shell+grep system prompts |
 | `scripts/apply_lean_build.py` | Anchored patcher (reads `lean-prover.toml`): prompt swap + enabled culls |
-| `scripts/gen_config.py` | Generates `patches/config.toml` from `lean-prover.toml` |
+| `scripts/gen_config.py` | Generates `patches/config.toml` + `config.no-lsp.toml` |
+| `scripts/mcp_tools_list.py` | Audit the real lean-lsp tool surface + token cost |
 | `measurements/measure_exact.py` | **Exact** token accounting from the real wire dump |
-| `measurements/baseline_*.{txt,json}` | Committed snapshot of the real serialized request |
-| `scripts/token_estimate.py` | Older source-literal *estimate* (superseded by measure_exact) |
 | `scripts/lake-quiet` | Compiler-output filter (point the shell tool at it) |
-| `lsp/` | Thin Lean LSP client + benchmark vs `lake-quiet` (answer to "can an LSP do better?") |
-| `patches/config.toml` | Runtime config: pin gpt-5.2-codex, sandbox-only, no web/MCP/user-input |
+| `lsp/` | Lean LSP client + benchmark vs `lake-quiet` |
+| `examples/` | `demo/` (no-Mathlib smoke test) · `sum-integral-swap/` (Mathlib runbook) |
+| `BUILDING.md` | Build notes incl. the VPN/proxy prebuilt-fetch workaround |
 | `build.sh` / `run.sh` | Build the optimised binary / run it with isolated state |
 
 ## Build & run
 ```
-./build.sh        # copies ../codex-rs -> codex-lean, applies optimisations, cargo build
+./build.sh                                   # copies ../codex-rs -> codex-lean, patches, cargo build
 ./run.sh exec "prove the lemmas in MyProject/Foo.lean"
+./run.sh --no-lsp exec "..."                 # efficiency mode at runtime — no rebuild
 ```
 `build.sh` keeps the main `../codex-rs` checkout pristine (it copies source into
-`codex-lean/`). The compile-time optimisations are applied by `apply_lean_build.py`;
-the runtime ones live in `patches/config.toml` (installed into the isolated
-`CODEX_HOME` by `run.sh`).
+`codex-lean/`). Compile-time optimisations are applied by `apply_lean_build.py`; runtime
+ones live in `patches/config.toml` (installed into the isolated `CODEX_HOME` by `run.sh`).
+**`--no-lsp`** swaps to the no-MCP config + the shell+grep prompt (via
+`model_instructions_file`) at runtime — see [`EFFICIENCY.md`](EFFICIENCY.md) for the modes.
 
 > Status: **validated** — `./build.sh` produces a 193 MB `codex` release binary that
 > runs and is verified to embed the Lean prompt + tool culls + history compaction;
