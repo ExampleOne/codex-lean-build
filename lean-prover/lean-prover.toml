@@ -7,8 +7,12 @@
 
 [prompt]
 # System prompt that replaces Codex's BASE_INSTRUCTIONS (the single biggest token
-# lever: ~4371 -> ~391 tok). Point this at any prompt file to retarget the agent.
-file = "prompt/lean_formaliser_prompt.md"
+# lever: ~4371 -> ~391 tok). `file` is used when [lean_lsp].enabled = true (LSP-aware
+# prompt); `file_no_lsp` is used when it's false (shell + lake + grep prompt). The
+# [lean_lsp].enabled flag is the master capability-vs-efficiency switch — it picks the
+# prompt here AND whether the MCP server is configured (gen_config.py).
+file        = "prompt/lean_formaliser_prompt.md"
+file_no_lsp = "prompt/lean_formaliser_prompt_no_lsp.md"
 
 [model]
 slug = "gpt-5.2-codex"          # most powerful codex model in this tree

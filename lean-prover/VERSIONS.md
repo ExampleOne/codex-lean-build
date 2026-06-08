@@ -151,6 +151,20 @@ the cheap cached prefix; the larger recurring wins are on the uncached side
 `cull.tool_search = false` (manifest) to DEFER the verbose schemas — best with these
 ~575-tok-each tools, but it needs a rebuild. Measured: `scripts/mcp_tools_list.py`.
 
+### Build modes — one switch: `[lean_lsp].enabled`
+A single manifest flag picks the capability-vs-efficiency tradeoff. It selects the
+system prompt (`apply_lean_build.py`) *and* whether the MCP server is configured
+(`gen_config.py`), so the two never disagree:
+
+| mode | `[lean_lsp].enabled` | prompt | tools | instr+tools | vs stock |
+|---|---|---|---|--:|--:|
+| **Capability** | `true` | LSP-aware (582 tok) | exec/apply_patch + 4 lean-lsp | ~4167 | ~34% under |
+| **Efficiency** | `false` | shell+grep (437 tok) | exec/apply_patch only | ~1493 | **~76% under** |
+
+Efficiency mode drops the lemma-search tools (the agent uses `lake-quiet` + `grep`
+over `.lake/packages/mathlib/`); capability mode buys structured goals + the 91%
+lemma-search win for ~2.7k tok/turn (cached in the prefix). Default is `true`.
+
 ## Build configuration
 
 All the above is driven by **`lean-prover.toml`** (single source of truth): the system

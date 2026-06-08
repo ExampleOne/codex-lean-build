@@ -82,9 +82,14 @@ def main():
     cfg = load_manifest()
 
     # 1. System prompt (biggest win): swap both copies of the base instructions.
-    prompt_file = os.path.join(HERE, "..", cfg["prompt"]["file"])
+    #    [lean_lsp].enabled is the master switch: it picks the LSP-aware prompt vs the
+    #    shell+grep prompt (and gen_config.py gates the MCP server on the same flag).
+    lsp_enabled = cfg.get("lean_lsp", {}).get("enabled", False)
+    prompt_rel = cfg["prompt"]["file"] if lsp_enabled else \
+        cfg["prompt"].get("file_no_lsp", cfg["prompt"]["file"])
+    prompt_file = os.path.join(HERE, "..", prompt_rel)
     lean = open(prompt_file).read()
-    print(f"[prompt] source: {cfg['prompt']['file']}")
+    print(f"[prompt] lean_lsp.enabled={lsp_enabled} -> source: {prompt_rel}")
     replace_file(os.path.join(rs, "models-manager", "prompt.md"), lean,
                  "models-manager/prompt.md (BASE_INSTRUCTIONS)")
     replace_file(os.path.join(rs, "protocol", "src", "prompts", "base_instructions", "default.md"),
