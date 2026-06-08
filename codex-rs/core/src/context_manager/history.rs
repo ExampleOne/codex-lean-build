@@ -118,6 +118,9 @@ impl ContextManager {
     /// outputs.
     pub(crate) fn for_prompt(mut self, input_modalities: &[InputModality]) -> Vec<ResponseItem> {
         self.normalize_history(input_modalities);
+        if superseded_diagnostic_compaction_enabled() {
+            compact_superseded_diagnostics(&mut self.items);
+        }
         self.items
     }
 
@@ -751,6 +754,96 @@ fn user_message_positions(items: &[ResponseItem]) -> Vec<usize> {
         }
     }
     positions
+}
+
+/// Proof-tuned history compaction (off unless `CODEX_COMPACT_SUPERSEDED_DIAGNOSTICS`
+/// is `1`/`true`). codex-lean's run.sh exports it; stock behaviour is unchanged.
+fn superseded_diagnostic_compaction_enabled() -> bool {
+    matches!(
+        std::env::var("CODEX_COMPACT_SUPERSEDED_DIAGNOSTICS").as_deref(),
+        Ok("1") | Ok("true")
+    )
+}
+
+/// Classify a function call as a "diagnostic-like" tool whose output is fully
+/// superseded by a later call with the same key. Returns `(key, stub_text)`.
+///
+/// - `lean_diagnostic_messages` is keyed per file (`diag:<file>`).
+/// - `lean_build` and a `lake build` run via shell/exec are keyed globally
+///   (`build`) — any newer build supersedes the prior one.
+/// Positional/ephemeral tools (e.g. `lean_goal`) are intentionally not compacted.
+fn superseded_diagnostic_key(name: &str, arguments: &str) -> Option<(String, String)> {
+    // MCP tools are namespaced like `mcp__server__tool`; take the short name.
+    let short = name.rsplit("__").next().unwrap_or(name);
+    match short {
+        "lean_diagnostic_messages" => {
+            let file = serde_json::from_str::<serde_json::Value>(arguments)
+                .ok()?
+                .get("file_path")?
+                .as_str()?
+                .to_string();
+            Some((
+                format!("diag:{file}"),
+                format!("[superseded diagnostics for {file} — file re-checked on a later turn]"),
+            ))
+        }
+        "lean_build" => Some((
+            "build".to_string(),
+            "[superseded build output — project rebuilt on a later turn]".to_string(),
+        )),
+        "shell" | "exec_command" if arguments.contains("lake build") => Some((
+            "build".to_string(),
+            "[superseded build output — project rebuilt on a later turn]".to_string(),
+        )),
+        _ => None,
+    }
+}
+
+/// Replace superseded diagnostic/build tool outputs with a one-line stub, keeping
+/// only the LATEST output per `(tool, target)` key. Stale diagnostics carry no
+/// information (the file/project was re-checked) but keep re-billing as input
+/// tokens every turn, so collapsing them is lossless-for-purpose.
+fn compact_superseded_diagnostics(items: &mut [ResponseItem]) {
+    use std::collections::HashMap;
+
+    // call_id -> (key, stub) for diagnostic-like calls. Owns its keys so it does
+    // not borrow `items` (which we mutate below).
+    let mut keyed: HashMap<String, (String, String)> = HashMap::new();
+    for item in items.iter() {
+        if let ResponseItem::FunctionCall {
+            name,
+            arguments,
+            call_id,
+            ..
+        } = item
+            && let Some(ks) = superseded_diagnostic_key(name, arguments)
+        {
+            keyed.insert(call_id.clone(), ks);
+        }
+    }
+    if keyed.is_empty() {
+        return;
+    }
+
+    // key -> index of the LAST output carrying that key.
+    let mut last_index: HashMap<&str, usize> = HashMap::new();
+    for (idx, item) in items.iter().enumerate() {
+        if let ResponseItem::FunctionCallOutput { call_id, .. } = item
+            && let Some((key, _)) = keyed.get(call_id.as_str())
+        {
+            last_index.insert(key.as_str(), idx);
+        }
+    }
+
+    // Stub every output that is not the last for its key.
+    for (idx, item) in items.iter_mut().enumerate() {
+        if let ResponseItem::FunctionCallOutput { call_id, output } = item
+            && let Some((key, stub)) = keyed.get(call_id.as_str())
+            && last_index.get(key.as_str()) != Some(&idx)
+        {
+            output.body = FunctionCallOutputBody::Text(stub.clone());
+        }
+    }
 }
 
 #[cfg(test)]

@@ -1957,3 +1957,47 @@ fn text_only_items_unchanged() {
 
     assert_eq!(estimated, raw_len);
 }
+
+#[test]
+fn compacts_superseded_diagnostics_keeping_latest_per_file() {
+    fn diag_call(call_id: &str, file: &str) -> ResponseItem {
+        ResponseItem::FunctionCall {
+            id: None,
+            name: "mcp__lean-lsp__lean_diagnostic_messages".to_string(),
+            namespace: None,
+            arguments: format!("{{\"file_path\":\"{file}\"}}"),
+            call_id: call_id.to_string(),
+        }
+    }
+    fn diag_out(call_id: &str, text: &str) -> ResponseItem {
+        ResponseItem::FunctionCallOutput {
+            call_id: call_id.to_string(),
+            output: FunctionCallOutputPayload {
+                body: FunctionCallOutputBody::Text(text.to_string()),
+                success: None,
+            },
+        }
+    }
+
+    let mut items = vec![
+        diag_call("c1", "Foo.lean"),
+        diag_out("c1", "error: old foo errors"),
+        diag_call("c2", "Bar.lean"),
+        diag_out("c2", "error: bar errors"),
+        diag_call("c3", "Foo.lean"),
+        diag_out("c3", "error: new foo errors"),
+    ];
+
+    super::compact_superseded_diagnostics(&mut items);
+
+    let text = |it: &ResponseItem| match it {
+        ResponseItem::FunctionCallOutput { output, .. } => {
+            output.body.to_text().unwrap_or_default()
+        }
+        _ => String::new(),
+    };
+    // Older Foo output is stubbed; latest Foo and the only Bar output are kept.
+    assert!(text(&items[1]).contains("superseded diagnostics for Foo.lean"));
+    assert_eq!(text(&items[3]), "error: bar errors");
+    assert_eq!(text(&items[5]), "error: new foo errors");
+}

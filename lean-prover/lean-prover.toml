@@ -34,6 +34,9 @@ approval_policy    = "never"          # sandbox-only, non-interactive; drops ~78
 sandbox_mode       = "workspace-write"
 web_search         = "disabled"        # removes the hosted web_search tool stub
 request_user_input = false             # ~345 tok — never ask the user
+# Proof-tuned history compaction (history.rs::for_prompt): stub superseded
+# diagnostics/build outputs each turn. run.sh exports CODEX_COMPACT_SUPERSEDED_DIAGNOSTICS.
+compact_superseded_diagnostics = true
 
 # --- lean-lsp-mcp integration -------------------------------------------------
 # Structured goal/diagnostics + lemma search instead of grepping Mathlib.

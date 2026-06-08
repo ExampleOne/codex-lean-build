@@ -20,4 +20,9 @@ for f in auth.json .credentials.json; do
   [[ -f "$HOME/.codex/$f" && ! -f "$CODEX_HOME/$f" ]] && cp "$HOME/.codex/$f" "$CODEX_HOME/$f" || true
 done
 
+# Proof-tuned history compaction (history.rs) is env-gated; enable it from the manifest.
+if python3 -c "import tomllib,sys;sys.exit(0 if tomllib.load(open('$HERE/lean-prover.toml','rb')).get('runtime',{}).get('compact_superseded_diagnostics') else 1)" 2>/dev/null; then
+  export CODEX_COMPACT_SUPERSEDED_DIAGNOSTICS=1
+fi
+
 exec "$BIN" "$@"
