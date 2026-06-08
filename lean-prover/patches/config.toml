@@ -12,7 +12,7 @@ view_image = false
 experimental_request_user_input = { enabled = false }
 
 # --- lean-lsp-mcp (structured goal/diagnostics + lemma search) ---
-# Exposes only: lean_goal, lean_diagnostic_messages, lean_leansearch, lean_state_search, lean_local_search
+# Exposes only: lean_goal, lean_diagnostic_messages, lean_leansearch, lean_local_search
 [mcp_servers.lean-lsp]
 command = "uvx"
 args = ["lean-lsp-mcp"]
@@ -20,4 +20,4 @@ startup_timeout_sec = 60
 tool_timeout_sec = 120
 [mcp_servers.lean-lsp.env]
 LEAN_PROJECT_PATH = "."
-LEAN_MCP_DISABLED_TOOLS = "lean_build,lean_run_code,lean_multi_attempt,lean_verify,lean_loogle,lean_hammer_premise"
+LEAN_MCP_DISABLED_TOOLS = "lean_file_outline,lean_term_goal,lean_hover_info,lean_completions,lean_declaration_file,lean_references,lean_leanfinder,lean_state_search,lean_code_actions,lean_get_widgets,lean_get_widget_source,lean_profile_proof,lean_build,lean_run_code,lean_multi_attempt,lean_verify,lean_loogle,lean_hammer_premise"

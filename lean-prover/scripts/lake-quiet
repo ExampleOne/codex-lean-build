@@ -20,7 +20,9 @@ status=$?
 
 printf '%s\n' "$raw" \
   | sed -E 's/\x1b\[[0-9;]*[mK]//g' \
-  | grep -vE '^(Building |Compiling |info: downloading|Computing build jobs|\[[0-9]+/[0-9]+\])' \
+  | grep -vE '^(Building |Compiling |info: downloading|Computing build jobs|trace:|error: Lean exited with code)' \
+  | grep -vE '\[[0-9]+/[0-9]+\] (Building|Built|Compiling|Running|Computing)' \
+  | grep -vE '^[[:space:]]*[✖⚠✔ℹⓘ•][[:space:]]*\[[0-9]+/[0-9]+\]' \
   | awk 'NF==0 {if(blank++){next}} NF{blank=0} !($0 in seen){seen[$0]; print} ($0 in seen){next}'
 
 echo "--- (lake exit $status; noise filtered by lake-quiet) ---"

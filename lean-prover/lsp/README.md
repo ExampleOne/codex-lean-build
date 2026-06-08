@@ -53,29 +53,30 @@ lookup.
 
 ## Wired in: lean-lsp-mcp (done)
 
-Rather than ship the hand-rolled `lean_lsp_client.py`, the build now wires in the
-mature **[lean-lsp-mcp](https://github.com/oOo0oOo/lean-lsp-mcp)** (MIT) — see
-`patches/config.toml` (`[mcp_servers.lean-lsp]`) and the updated system prompt. We
-expose only the 5 essential tools **directly** (`lean_goal`,
-`lean_diagnostic_messages`, `lean_leansearch`, `lean_state_search`,
-`lean_local_search`) via `LEAN_MCP_DISABLED_TOOLS`, and keep `tool_search` culled.
+Rather than ship the hand-rolled `lean_lsp_client.py`, the build wires in the mature
+**[lean-lsp-mcp](https://github.com/oOo0oOo/lean-lsp-mcp)** (MIT) — see
+`patches/config.toml` (`[mcp_servers.lean-lsp]`) and the system prompt. We expose only
+`lean_goal`, `lean_diagnostic_messages`, `lean_leansearch`, `lean_local_search`
+**directly** via `LEAN_MCP_DISABLED_TOOLS`, with `tool_search` culled.
 
-Token cost (measured by `measure_mcp_tools.py`, same method as the exact dump):
+**Token cost — LIVE MEASUREMENT (`scripts/mcp_tools_list.py`, 2026-06-08).** The
+installed server actually exposes **22 tools** (names drift; the deny-list is a DENY
+list) and the real schemas are ~4× my earlier hand-built estimate:
 
 | | tok/turn |
 |---|--:|
-| 5 lean-lsp tool schemas | 747 |
-| prompt growth (tool guidance) | +217 |
-| **lean + lean-lsp (instr+tools)** | **2411** |
+| 4 lean-lsp tool schemas (real: goal 807, diag 869, leansearch 447, local 380) | 2503 |
+| lean instr (with lsp guidance) | 807 |
+| codex tools kept | 857 |
+| **lean + lean-lsp (instr+tools)** | **4167** |
 | stock Codex (instr+tools) | 6269 |
-| **still under stock** | **62%** |
+| **under stock** | **~34%** |
 
-So adding the LSP capability keeps us far under stock *and* buys the 91% lemma-search
-win. **Exposure note:** direct is correct for this small always-used set; if you ever
-expose the full ~11-tool suite or add more MCP servers, re-enable `tool_search` so
-Codex **defers** their schemas (`mcp_tool_exposure.rs`: `should_defer` requires
-`search_tool_enabled`). Exact-to-the-byte numbers need a live dump with `uvx
-lean-lsp-mcp` running (needs a Lean toolchain); this is the faithful schema-level cost.
+`goal` + `diagnostic_messages` (1676) are unavoidable; the searches are the trim lever.
+Prompt caching keeps this in the cheap cached prefix. **For minimum prefix**, set
+`cull.tool_search = false` to DEFER the verbose schemas (best given ~575 tok each) —
+needs a rebuild. Re-run `scripts/mcp_tools_list.py` after upgrading lean-lsp-mcp, since
+tool names/schemas change between versions.
 
 ## Run it live
 The token install was blocked here, so the LSP numbers above are from reconstructed

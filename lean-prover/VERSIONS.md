@@ -123,25 +123,33 @@ LSP barely beats it on diagnostics. The LSP's distinctive, additive win is **lem
 discovery** (S2: structured search vs grepping Mathlib) plus **incremental checking
 that cuts the number of turns** (latency, not per-message tokens).
 
-### v5 — Wire in lean-lsp-mcp (5 essential tools)  ·  +964 tok/turn, net still 62% under stock
-Rather than ship a hand-rolled client, the build wires the mature
-[lean-lsp-mcp](https://github.com/oOo0oOo/lean-lsp-mcp) (MIT) via
-`patches/config.toml`, exposing only `lean_goal`, `lean_diagnostic_messages`,
-`lean_leansearch`, `lean_state_search`, `lean_local_search` **directly**
+### v5 — Wire in lean-lsp-mcp  ·  MEASURED LIVE (corrected)
+The build wires the mature [lean-lsp-mcp](https://github.com/oOo0oOo/lean-lsp-mcp)
+(MIT) via `patches/config.toml`, exposing only `lean_goal`,
+`lean_diagnostic_messages`, `lean_leansearch`, `lean_local_search` **directly**
 (`LEAN_MCP_DISABLED_TOOLS`), with `tool_search` kept culled.
+
+> **Correction (live measurement, 2026-06-08):** querying the *installed* server's
+> `tools/list` (`scripts/mcp_tools_list.py`) showed it actually exposes **22 tools**
+> (names drift across versions; the deny-list is a DENY list), and the real schemas
+> are far richer than my hand-built estimate — **the 5-tool set is 2870 tok, not 747.**
+> `goal` (807) + `diagnostic_messages` (869) alone are 1676 and are unavoidable. I
+> trimmed to **4 tools (drop `lean_state_search`, overlaps leansearch) = 2503 tok.**
 
 | | tok/turn |
 |---|--:|
-| lean (no lsp) instr+tools | 1447 |
-| + 5 lean-lsp tool schemas | +747 |
-| + prompt tool guidance | +217 |
-| **lean + lean-lsp** | **2411** |
-| vs stock Codex 6269 | **62% under** |
+| lean instr (with lsp guidance) | 807 |
+| codex tools kept (exec/write_stdin/apply_patch) | 857 |
+| 4 lean-lsp tool schemas (real) | 2503 |
+| **lean + lean-lsp** | **4167** |
+| vs stock Codex 6269 | **~34% under** |
 
-Buys the 91% lemma-search win while staying far under stock. **Exposure rule** (from
-`mcp_tool_exposure.rs`): direct is optimal for this small always-used set; expose the
-full ~11-tool suite only if you re-enable `tool_search` so Codex defers the schemas.
-Measured by `lsp/measure_mcp_tools.py`; exact-to-byte needs a live dump with `uvx`.
+The lean-lsp tools eat much of the prompt/tool savings, so the headline is **~34%
+under stock**, not the 62% an earlier estimate implied. Prompt caching keeps this in
+the cheap cached prefix; the larger recurring wins are on the uncached side
+(`lake-quiet`, LSP diagnostics, compaction). **For absolute minimum prefix**, set
+`cull.tool_search = false` (manifest) to DEFER the verbose schemas — best with these
+~575-tok-each tools, but it needs a rebuild. Measured: `scripts/mcp_tools_list.py`.
 
 ## Build configuration
 

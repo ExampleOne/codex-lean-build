@@ -100,3 +100,4 @@ lean-prover/codex-lean/
 lean-prover/.webrtc-prebuilt/
 .codex-home/
 **/.codex-home/
+**/.lake/

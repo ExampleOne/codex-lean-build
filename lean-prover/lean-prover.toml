@@ -49,18 +49,26 @@ args               = ["lean-lsp-mcp"]
 project_path       = "."
 startup_timeout_sec = 60
 tool_timeout_sec    = 120
+# Trimmed for token efficiency: the real schemas are verbose (~2870 tok for 5;
+# goal+diagnostic alone are 1676). Keep the core loop + NL lemma search + an offline
+# name check; drop lean_state_search (overlaps leansearch). For absolute minimum
+# prefix, set cull.tool_search=false to DEFER these instead (needs a rebuild).
 keep = [
   "lean_goal",
   "lean_diagnostic_messages",
   "lean_leansearch",
-  "lean_state_search",
   "lean_local_search",
 ]
-# Full known tool set; anything here but not in `keep` is disabled.
+# Full tool set as actually exposed by the installed lean-lsp-mcp (verified via
+# tools/list, v0.x, 2026-06-08). Anything here not in `keep` goes to
+# LEAN_MCP_DISABLED_TOOLS. Re-check with: python3 scripts/mcp_tools_list.py
 all = [
-  "lean_goal", "lean_diagnostic_messages", "lean_build", "lean_run_code",
-  "lean_multi_attempt", "lean_verify", "lean_local_search", "lean_leansearch",
-  "lean_loogle", "lean_hammer_premise", "lean_state_search",
+  "lean_file_outline", "lean_diagnostic_messages", "lean_goal", "lean_term_goal",
+  "lean_hover_info", "lean_completions", "lean_declaration_file", "lean_references",
+  "lean_local_search", "lean_leansearch", "lean_leanfinder", "lean_state_search",
+  "lean_code_actions", "lean_get_widgets", "lean_get_widget_source", "lean_profile_proof",
+  "lean_build", "lean_run_code", "lean_multi_attempt", "lean_verify", "lean_loogle",
+  "lean_hammer_premise",
 ]
 
 # WARNING: cull.tool_search=true means MCP tools are exposed DIRECTLY (every schema

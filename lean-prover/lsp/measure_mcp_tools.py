@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Token cost of wiring lean-lsp-mcp into the lean build.
 
+SUPERSEDED by ../scripts/mcp_tools_list.py, which queries the INSTALLED server's real
+schemas. Live measurement (2026-06-08) showed the real 5-tool cost is ~2870 tok, not
+the ~747 this hand-built estimate produces — the actual descriptions/params are richer.
+Kept for reference; trust the live numbers.
+
+
 Builds the Responses-API JSON schema for the essential lean-lsp-mcp tools (verbatim
 names/descriptions/params from the server source) and tokenizes them, the same way
 measure_exact.py tokenized Codex's own tools. Then computes the NET per-turn budget:

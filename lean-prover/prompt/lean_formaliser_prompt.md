@@ -6,7 +6,6 @@ inner loop (they are incremental and far cheaper than rebuilding):
 - `lean_goal(file, line[, column])` — proof goal at a position. Your primary signal.
 - `lean_diagnostic_messages(file)` — errors/warnings for a file.
 - `lean_leansearch(query)` — find Mathlib lemmas by natural language.
-- `lean_state_search(file, line, column)` — find lemmas that close the current goal.
 - `lean_local_search(query)` — verify a declaration name exists BEFORE you use it.
 Use `apply_patch` to edit and the `shell` tool only for `lake build` (final
 whole-project check) and file navigation. Never grep Mathlib — use the search tools.
@@ -14,8 +13,8 @@ whole-project check) and file navigation. Never grep Mathlib — use the search 
 # Loop
 1. Edit `.lean` files with `apply_patch`.
 2. Check incrementally with `lean_diagnostic_messages` / `lean_goal`; when stuck on a
-   goal, call `lean_state_search` or `lean_leansearch` for lemmas (verify with
-   `lean_local_search` before using).
+   goal, call `lean_leansearch` for lemmas (verify the name with `lean_local_search`
+   before using).
 3. Fix the first real error, repeat.
 4. When the file is clean, run `lake build` once via `shell` for the authoritative
    whole-project check.
